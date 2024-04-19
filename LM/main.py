@@ -160,6 +160,8 @@ def get_batch(source, i):
     target = source[i+1:i+1+seq_len].view(-1)
     return data, target
 
+# def check(data:torch.Tensor):
+    
 
 def evaluate(data_source):
     # Turn on evaluation mode which disables dropout.
@@ -171,6 +173,10 @@ def evaluate(data_source):
     with torch.no_grad():
         for i in range(0, data_source.size(0) - 1, args.bptt):
             data, targets = get_batch(data_source, i)
+            
+            if data.size(0) < args.bptt:
+                continue
+            
             if args.model in customModels:
                 output = model(data)
                 output = output.view(-1, ntokens)
@@ -179,6 +185,7 @@ def evaluate(data_source):
                 hidden = repackage_hidden(hidden)
             total_loss += len(data) * criterion(output, targets).item()
     return total_loss / (len(data_source) - 1)
+
 
 
 def train(use_wandb = False):
@@ -193,6 +200,9 @@ def train(use_wandb = False):
         data, targets = get_batch(train_data, i)
         # Starting each batch, we detach the hidden state from how it was previously produced.
         # If we didn't, the model would try backpropagating all the way to start of the dataset.
+        if data.size(0) < args.bptt:
+            continue
+        
         if args.model in customModels:
             output = model(data)
             output = output.view(-1, ntokens)
