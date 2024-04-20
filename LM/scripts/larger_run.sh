@@ -4,7 +4,7 @@ if [ $mode == "first" ]; then
 fi
 
 if [ $mode == "second" ]; then
-    python main.py --data gigaspeech --cuda --epochs 40 --model L --optimizer --rope --hiddens 2048 --nlayers 16 --lr 0.003 --nhead 16 --wandb --run_name L_rope_adam_2048hid_16layers_16nhead
+    python main.py --data gigaspeech --cuda --epochs 40 --model L --optimizer --hiddens 2048 --nlayers 16 --lr 0.003 --nhead 16 --wandb --run_name L_adam_2048hid_16layers_16nhead
 fi
 
 if [ $mode == "third" ]; then
