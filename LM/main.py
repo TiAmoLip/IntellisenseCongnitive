@@ -8,8 +8,9 @@ import torch.nn as nn
 import torch.onnx
 import wandb
 import data
-import models.model as model
+import models.model as M
 import models.advance as advance
+from EarlyStopping import EarlyStopping
 
 parser = argparse.ArgumentParser(description='PyTorch Wikitext-2 RNN/LSTM/GRU/Transformer Language Model')
 parser.add_argument('--data', type=str, default='./data/gigaspeech',
@@ -62,7 +63,7 @@ args = parser.parse_args()
 
 
 customModels = ['L','Transformer']
-    
+earlyStop = EarlyStopping(patience=5, verbose=True)
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
@@ -110,11 +111,11 @@ test_data = batchify(corpus.test, eval_batch_size)
 
 ntokens = len(corpus.dictionary)
 if args.model == 'Transformer':
-    model = model.TransformerModel(ntokens, args.embed_size, args.nhead, args.hiddens, args.nlayers, args.dropout).to(device)
+    model = M.TransformerModel(ntokens, args.embed_size, args.nhead, args.hiddens, args.nlayers, args.dropout).to(device)
 elif args.model == 'L':
     model = advance.TinyL(ntokens, args.embed_size,args.hiddens,args.nhead, args.nlayers, True if args.rope else False).to(device)
 else:
-    model = model.RNNModel(args.model, ntokens, args.embed_size, args.hiddens, args.nlayers, args.dropout, args.tied).to(device)
+    model = M.RNNModel(args.model, ntokens, args.embed_size, args.hiddens, args.nlayers, args.dropout, args.tied).to(device)
 
 criterion = nn.NLLLoss()
 
@@ -267,6 +268,10 @@ try:
         train(args.wandb)
         scheduler.step()
         val_loss = evaluate(val_data)
+        earlyStop(val_loss,model,args.save)
+        if earlyStop.early_stop:
+            print("Early stopping")
+            break
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
