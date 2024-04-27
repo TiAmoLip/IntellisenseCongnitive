@@ -165,3 +165,6 @@ LM/test.ipynb
 image_captioning/flickr8k/
 LM/wikitext/
 LM/wikitext.zip
+*.zip
+*.pt
+*.pth
