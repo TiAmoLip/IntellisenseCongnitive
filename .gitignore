@@ -163,4 +163,5 @@ LM/wandb/
 LM/test.ipynb
 
 image_captioning/flickr8k/
-wikitext/
+LM/wikitext/
+LM/wikitext.zip
