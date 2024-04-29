@@ -149,7 +149,7 @@ class DecoderWithAttention(nn.Module):
         c = self.init_c(mean_encoder_out)
         return h, c
 
-    def forward(self, encoder_out, encoded_captions, caption_lengths):
+    def forward(self, encoder_out, encoded_captions, caption_lengths, p):
         """
         Forward propagation.
 
@@ -204,8 +204,16 @@ class DecoderWithAttention(nn.Module):
             gate = self.sigmoid(self.f_beta(h[:batch_size_t]))  # gating scalar,
             attention_weighted_encoding = gate * attention_weighted_encoding
             # [batch_size_t, decoder_dim]
+            
+            # scheduled sampling
+            # preds = None
+            if torch.rand(1).item() < p or t == 0:
+                embed = embeddings[:batch_size_t, t, :]
+            else:
+                embed = self.embedding(preds.argmax(1).unsqueeze(1))[:batch_size_t, 0]
+            
             h, c = self.decode_step(
-                torch.cat([embeddings[:batch_size_t, t, :], attention_weighted_encoding], dim=1),
+                torch.cat([embed, attention_weighted_encoding], dim=1),
                 (h[:batch_size_t], c[:batch_size_t]))
             # [batch_size_t, vocab_size]
             preds = self.fc(self.dropout(h))
@@ -346,7 +354,7 @@ class Captioner(nn.Module):
         self.decoder = DecoderWithAttention(attention_dim, embed_dim,
             decoder_dim, vocab_size, encoder_dim, dropout)
 
-    def forward(self, images, encoded_captions, caption_lengths):
+    def forward(self, images, encoded_captions, caption_lengths, p):
         """
         :param images: [b, 3, h, w]
         :param encoded_captions: [b, max_len]
@@ -355,7 +363,7 @@ class Captioner(nn.Module):
         """
         encoder_out = self.encoder(images)
         decoder_out = self.decoder(encoder_out, encoded_captions,
-                                   caption_lengths.unsqueeze(1))
+                                   caption_lengths.unsqueeze(1), p)
         return decoder_out
 
     def sample(self, images, startseq_idx, endseq_idx=-1, max_len=40,

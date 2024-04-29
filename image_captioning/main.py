@@ -94,7 +94,7 @@ class Runner(object):
             "test": test_loader
         }
 
-    def train_model(self, train_loader, model, loss_fn, optimizer, desc=''):
+    def train_model(self, train_loader, model, loss_fn, optimizer, desc='', p=1):
         running_acc = 0.0
         running_loss = 0.0
         model.train()
@@ -106,7 +106,7 @@ class Runner(object):
             optimizer.zero_grad()
 
             scores, caps_sorted, decode_lengths, alphas, sort_ind = model(
-                images, captions, lengths)
+                images, captions, lengths, p)
 
             # Since decoding starts with <start>, the targets are all words after <start>, up to <end>
             targets = caps_sorted[:, 1:]
@@ -202,8 +202,21 @@ class Runner(object):
         train_loss_min = 100
         val_bleu4_max = 0.0
         num_epochs = args["train_args"]["num_epochs"]
+        k = args['sample_k']
         for epoch in range(num_epochs):
-            train_loss = self.train_model(desc=f'Epoch {epoch + 1}/{num_epochs}',
+            if len(args['schedule_sampling']) == 0:
+                p = 1
+            elif args['schedule_sampling'] == 'linear':
+                p = max(0.1, 1 - epoch/k)
+            elif args['schedule_sampling'] == 'sigmoid':
+                p = k/(k+np.exp(epoch/k))
+            elif args['schedule_sampling'] == 'cycle':
+                p = 0.5 * (1 + np.cos(epoch * 2 * np.pi / k))
+            elif args['schedule_sampling'] == 'cyclin':
+                leni = num_epochs // int(k)
+                p = max(0.1, 1 - (epoch % leni) / leni * 2)
+            
+            train_loss = self.train_model(desc=f'Epoch {epoch + 1}/{num_epochs}, sample_p: {p:.3f}',
                                           model=model,
                                           optimizer=optimizer,
                                           loss_fn=loss_fn,
