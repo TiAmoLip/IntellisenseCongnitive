@@ -62,7 +62,7 @@ args = parser.parse_args()
 
 
 
-customModels = ['L','Transformer']
+customModels = ['L','Transformer', "Decoder"]
 earlyStop = EarlyStopping(patience=5, verbose=True)
 
 # Set the random seed manually for reproducibility.
@@ -114,6 +114,8 @@ if args.model == 'Transformer':
     model = M.TransformerModel(ntokens, args.embed_size, args.nhead, args.hiddens, args.nlayers, args.dropout).to(device)
 elif args.model == 'L':
     model = advance.TinyL(ntokens, args.embed_size,args.hiddens,args.nhead, args.nlayers, True if args.rope else False).to(device)
+elif args.model == "Decoder":
+    model = M.DecoderOnlyModel(ntokens,args.embed_size,args.nhead,args.hiddens,args.nlayers,args.dropout).to(device)
 else:
     model = M.RNNModel(args.model, ntokens, args.embed_size, args.hiddens, args.nlayers, args.dropout, args.tied).to(device)
 
