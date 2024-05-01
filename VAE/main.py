@@ -33,7 +33,8 @@ config = {
     'num_layers': args.num_layers,
     'base_channels': args.base_channels,
     'lambda_kl': args.lambda_kl,
-    'p': args.p
+    'p': args.p,
+    'lr': args.lr,
 }
 model = VAE(**config).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)

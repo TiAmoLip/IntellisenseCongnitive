@@ -5,7 +5,7 @@ import numpy as np
 from torch.nn import functional as F
 
 class VAE(nn.Module):
-    def __init__(self, latent_size:int, num_layers:int=2, base_channels:int=16, lambda_kl:float=1e-3, p: float= 0.9) -> None:
+    def __init__(self, latent_size:int, num_layers:int=2, base_channels:int=16, lambda_kl:float=1e-3, p: float= 0.9, lr:float=1e-2) -> None:
         image_size = 28
         super().__init__()
         self.latent_size = latent_size
