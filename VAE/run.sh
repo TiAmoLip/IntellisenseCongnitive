@@ -1,0 +1,1 @@
+python main.py --latent_size 2 --num_layers 2 --base_channels 8 --lambda_kl 0.001 --p 0.9
