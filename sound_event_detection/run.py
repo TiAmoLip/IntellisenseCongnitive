@@ -21,6 +21,7 @@ import models
 import utils
 import metrics
 import losses
+import wandb
 
 DEVICE = 'cpu'
 if torch.cuda.is_available(
@@ -55,6 +56,15 @@ class Runner(object):
 
     def train(self, config_file, **kwargs):
         config = utils.parse_config_or_kwargs(config_file, **kwargs)
+        if config['wandb']:
+            wandb.login(
+                key = "433d80a0f2ec170d67780fc27cd9d54a5039a57b",
+            )
+            wandb.init(
+                project="SED",
+                config=config,
+                name=config['run_name'],
+            )
         outputdir = os.path.join(
             config['outputpath'], config['model']['type'],
             "{}_{}".format(
@@ -161,6 +171,14 @@ class Runner(object):
             logging_msg = f"Epoch {epoch}   training_loss: {train_loss:.2f}  val_loss: {val_loss:.2f}  " \
                           f"precision: {p:.2f}  recall: {r:.2f}  f1: {f1:.2f}"
             logger.info(logging_msg)
+            if config['wandb']:
+                wandb.log({
+                    'train_loss': train_loss,
+                    'val_loss': val_loss,
+                    'precision': p,
+                    'recall': r,
+                    'f1': f1
+                })
 
             scheduler.step(val_loss)
             if val_loss < best_loss:
