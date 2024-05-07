@@ -94,11 +94,32 @@ class Runner(object):
 
         utils.dump_config(os.path.join(outputdir, 'config.yaml'), config)
 
+
+# augmentation begin
+
+        augment_dict = {
+            "time shift":utils.TimeShift(),
+            "freq shift":utils.FreqShift(),
+            "time mask":utils.TimeMask(),
+            "freq mask":utils.FreqMask(),
+            "noise":utils.AddNoise(),
+        }
+        
+        augmentations = []
+        
+        for ut in config['augmentation']:
+            if ut in augment_dict:
+                augmentations.append(augment_dict[ut])
+# augmentation end
+
+
+
         trainloader = torch.utils.data.DataLoader(
             dataset.TrainDataset(
                 config["data"]["feature"],
                 train_df,
-                label_to_idx
+                label_to_idx,
+                augmentations
             ),
             collate_fn=dataset.sequential_collate(False),
             shuffle=True,

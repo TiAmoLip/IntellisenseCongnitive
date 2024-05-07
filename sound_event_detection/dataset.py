@@ -44,7 +44,8 @@ class TrainDataset(Dataset):
     def __init__(self,
                  audio_file,
                  label_file,
-                 label_to_idx):
+                 label_to_idx,
+                 augments = None):
         super(TrainDataset, self).__init__()
         self.aid_to_h5 = load_dict_from_csv(audio_file, ("audio_id", "hdf5_path"))
         self.cache = {}
@@ -55,6 +56,7 @@ class TrainDataset(Dataset):
         with File(self.aid_to_h5[first_aid], 'r') as store:
             self.datadim = store[first_aid].shape[-1]
         self.label_to_idx = label_to_idx
+        self.augments = augments
 
     def __len__(self):
         return len(self.aids)
@@ -68,6 +70,9 @@ class TrainDataset(Dataset):
         feat = torch.as_tensor(feat).float()
         label = self.aid_to_label[aid]
         target = torch.zeros(len(self.label_to_idx))
+        if self.augments:
+            for aug in self.augments:
+                feat = aug(feat)
         for l in label.split(","):
             target[self.label_to_idx[l]] = 1
         return aid, feat, target
