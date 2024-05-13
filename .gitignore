@@ -167,7 +167,7 @@ LM/wikitext/
 LM/wikitext.zip
 *.zip
 *.pt
-*.pth
+
 
 sound_event_detection/experiments/
 sound_event_detection/slurm_logs/
