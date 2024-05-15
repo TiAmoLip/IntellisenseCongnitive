@@ -14,9 +14,9 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from datasets.flickr8k import Flickr8kDataset
-from utils.metrics import bleu_score_fn
+
 from utils.utils_torch import words_from_tensors_fn
-from utils.util import get_logger
+from utils.util import get_logger,bleu_score_fn
 from models import Captioner
 
 
@@ -27,6 +27,7 @@ class Runner(object):
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
+        
         device = "cpu"
         if torch.cuda.is_available():
             device = "cuda"
@@ -165,10 +166,11 @@ class Runner(object):
         return (bleu, references, predictions, imgids) if return_output else bleu
 
     def train(self, config_file, **kwargs):
+        
         with open(config_file) as reader:
             config = yaml.load(reader, Loader=yaml.FullLoader)
         args = dict(config, **kwargs)
-        
+
         dataloaders = self.get_dataloaders(args["dataset_base_path"],
                                            args["train_args"]["batch_size"])
         vocab_set = dataloaders["train"].dataset.get_vocab()
@@ -176,6 +178,7 @@ class Runner(object):
         with open(args['vocab_path'], 'wb') as f:
             pickle.dump(vocab_set, f)
         vocab_size = len(vocab)
+        
 
         Path(args["outputpath"]).mkdir(parents=True, exist_ok=True)
         logger = get_logger(Path(args["outputpath"]) / "train.log")
@@ -186,7 +189,7 @@ class Runner(object):
                           embed_dim=args['embedding_dim'],
                           decoder_dim=args['decoder_size'],
                           vocab_size=vocab_size).to(self.device)
-        logger.info(model)
+        # logger.info(model)
         model_path = os.path.join(args["outputpath"],
             f"{args['model']}_b{args['train_args']['batch_size']}_"
             f"emd{args['embedding_dim']}")
@@ -212,9 +215,9 @@ class Runner(object):
                 p = k/(k+np.exp(epoch/k))
             elif args['schedule_sampling'] == 'cycle':
                 p = 0.5 * (1 + np.cos(epoch * 2 * np.pi / k))
-            elif args['schedule_sampling'] == 'cyclin':
-                leni = num_epochs // int(k)
-                p = max(0.1, 1 - (epoch % leni) / leni * 2)
+            # elif args['schedule_sampling'] == 'cyclin':
+            #     leni = num_epochs // int(k)
+            #     p = max(0.1, 1 - (epoch % leni) / leni * 2)
             
             train_loss = self.train_model(desc=f'Epoch {epoch + 1}/{num_epochs}, sample_p: {p:.3f}',
                                           model=model,
@@ -249,6 +252,7 @@ class Runner(object):
                     # 'train_bleus': train_bleu,
                     'val_bleus': val_bleu,
                 }
+                
                 torch.save(state, '{}_latest.pt'.format(model_path))
                 if train_loss < train_loss_min:
                     train_loss_min = train_loss
@@ -256,8 +260,9 @@ class Runner(object):
                 if val_bleu[4] > val_bleu4_max:
                     val_bleu4_max = val_bleu[4]
                     torch.save(state, '{}_best_val.pt'.format(model_path))
-        torch.save(state, f'{model_path}_ep{num_epochs:02d}_weights.pt')
 
+        torch.save(state, f'{model_path}_ep{num_epochs:02d}_weights.pt')
+            
         state = torch.load(f'{model_path}_best_val.pt', map_location="cpu")
         model.load_state_dict(state["state_dict"])
 
@@ -359,7 +364,41 @@ class Runner(object):
 
             key_to_refs = ptb_tokenize(key_to_refs)
             key_to_pred = ptb_tokenize(key_to_pred)
+            # with open("test.txt",'w') as f:
+            #     print(key_to_refs, file=f)
+            #     print(key_to_pred, file=f)   refs: {str(image_id): [str, str, str, ...]}, pred: {str(image_id): [str]}
+            # 没错，可以有多个refs
             scorers = [Bleu(n=4), Rouge(), Meteor(), Cider(), Spice()]
+            max_scores = [0] * len(scorers)
+            min_scores = [10] * len(scorers)
+            max_score_names = [""] * len(scorers)
+            min_score_names = [""] * len(scorers)
+            
+            for scorer_id, scorer in enumerate(scorers):
+
+                score, scores = scorer.compute_score(key_to_refs, key_to_pred)
+                if len(scores)==4:
+                    scores = scores[-1]
+                if isinstance(scores[0], dict):
+                    scores = [score['All']['f'] for score in scores]
+                max_score_idx = np.argmax(scores)
+                min_score_idx = np.argmin(scores)
+                
+                max_scores[scorer_id] = scores[max_score_idx]
+                min_scores[scorer_id] = scores[min_score_idx]
+                
+                max_score_names[scorer_id] = (list(key_to_pred.keys()))[max_score_idx]
+                min_score_names[scorer_id] = (list(key_to_pred.keys()))[min_score_idx]
+                # for imgid in key_to_refs.keys():
+                #     sub_ref = {imgid: key_to_refs[imgid]}
+                #     sub_pred = {imgid: key_to_pred[imgid]}
+                #     score, scores = scorer.compute_score(sub_ref, sub_pred)
+                    # if not isinstance(score,float):
+                    #     score = score[-1]
+
+                    
+                        
+                    
             output = {"SPIDEr": 0}
             with open(f"{model_path}_coco_scores.txt", "w") as writer:
                 for scorer in scorers:
@@ -375,6 +414,11 @@ class Runner(object):
                         output["SPIDEr"] += score
                 output["SPIDEr"] /= 2
                 print(f"SPIDEr: {output['SPIDEr']:.3f}", file=writer)
+                print(f"max_scores: {max_scores}", file=writer)
+                print(f"min_score: {min_scores}", file=writer)
+                print(f"max_score_image_names: {max_score_names}", file=writer)
+                print(f"min_score_image_names: {min_score_names}", file=writer)
+
 
             json.dump(output_pred, open(f"{model_path}_predictions.json", "w"), indent=4)
 
