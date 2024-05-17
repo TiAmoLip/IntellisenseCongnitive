@@ -8,7 +8,7 @@ python generate.py --model mlp --model_path checkpoints/l2_n3_h400_kl1-3_p1.pth 
 
 ```bash
 # latent size 1
- python generate.py --model mlp --model_path checkpoints/l1_n3_h300_kl1-3_p1.pth --latent_size 1 --hiddens 300 --lambda_kl 0.005 --p 1 --num_layers 3 --step 0.025
+ python generate.py --model mlp --model_path checkpoints/l1_n3_h300_kl1-3_p1.pth --latent_size 1 --hiddens 300 --lambda_kl 0.001 --p 1 --num_layers 3 --step 0.025
 ```
 
 
