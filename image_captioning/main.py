@@ -223,7 +223,9 @@ class Runner(object):
                                           model=model,
                                           optimizer=optimizer,
                                           loss_fn=loss_fn,
-                                          train_loader=dataloaders["train"])
+                                          train_loader=dataloaders["train"],
+                                          p=p
+                                          )
             with torch.no_grad():
                 # train_bleu = self.evaluate_model(
                     # desc=f'Train eval: ', model=model,
