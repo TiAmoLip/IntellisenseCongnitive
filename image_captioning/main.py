@@ -237,7 +237,7 @@ class Runner(object):
                     tensor_to_word_fn=tensor_to_word_fn,
                     sample_method=args['sample_method'],
                     word2idx=word2idx, data_loader=dataloaders["val"])
-                msg = f"Epoch {epoch + 1}/{num_epochs}, train_loss: " \
+                msg = f"Epoch {epoch + 1}/{num_epochs}, p: {p}, train_loss: " \
                     f"{train_loss:.3f}, val_bleu1: {val_bleu[1]:.3f}, " \
                     f"val_bleu4: {val_bleu[4]:.3f}"
                 logger.info(msg)
