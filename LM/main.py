@@ -23,7 +23,7 @@ parser.add_argument('--hiddens', type=int, default=1024,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=12,
                     help='number of layers')
-parser.add_argument('--lr', type=float, default=0.005,
+parser.add_argument('--lr', type=float, default=0.5,
                     help='initial learning rate')
 parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
@@ -54,7 +54,7 @@ parser.add_argument('--dry-run', action='store_true',
 parser.add_argument('--wandb', action='store_true',help="whether to use wandb for logging")
 
 parser.add_argument('--run_name', default=None, type=str,help="name of the wandb run")
-parser.add_argument('--optimizer',action='store_true',help="optimizer to use")
+parser.add_argument('--optimizer',default=0, type=int,help="which optimizer to use")
 parser.add_argument('--rope',action='store_true',help="whether to use rotary positional embedding")
 
 
@@ -63,7 +63,7 @@ args = parser.parse_args()
 
 
 customModels = ['L','Transformer', "Decoder"]
-earlyStop = EarlyStopping(patience=5, verbose=True)
+earlyStop = EarlyStopping(patience=25, verbose=True)
 
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
@@ -112,20 +112,25 @@ test_data = batchify(corpus.test, eval_batch_size)
 ntokens = len(corpus.dictionary)
 if args.model == 'Transformer':
     model = M.TransformerModel(ntokens, args.embed_size, args.nhead, args.hiddens, args.nlayers, args.dropout).to(device)
+elif args.model =="Decoder":
+    model = M.DecoderOnlyModel(ntokens, args.embed_size, args.nhead, args.hiddens, args.nlayers, args.dropout).to(device)
 elif args.model == 'L':
     model = advance.TinyL(ntokens, args.embed_size,args.hiddens,args.nhead, args.nlayers, True if args.rope else False).to(device)
-elif args.model == "Decoder":
-    model = M.DecoderOnlyModel(ntokens,args.embed_size,args.nhead,args.hiddens,args.nlayers,args.dropout).to(device)
 else:
     model = M.RNNModel(args.model, ntokens, args.embed_size, args.hiddens, args.nlayers, args.dropout, args.tied).to(device)
 
 criterion = nn.NLLLoss()
 
-if args.optimizer:
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    
-else:
+
+if args.optimizer == 0:
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr)
+
+elif args.optimizer == 1:
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr,momentum=0.8)
+elif args.optimizer == 2:
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+elif args.optimizer == 3:
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
 
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 lr = args.lr
@@ -217,8 +222,8 @@ def train(use_wandb = False):
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         
         loss.backward()
-        if args.model not in customModels:# rnn
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)    
+        # if args.model not in customModels:# rnn
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)    
         optimizer.step()
 
         

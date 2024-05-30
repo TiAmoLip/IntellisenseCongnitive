@@ -21,7 +21,7 @@ import models
 import utils
 import metrics
 import losses
-import wandb
+
 
 DEVICE = 'cpu'
 if torch.cuda.is_available(
@@ -56,20 +56,27 @@ class Runner(object):
 
     def train(self, config_file, **kwargs):
         config = utils.parse_config_or_kwargs(config_file, **kwargs)
-        if config['wandb']:
-            wandb.login(
-                key = "433d80a0f2ec170d67780fc27cd9d54a5039a57b",
-            )
-            wandb.init(
-                project="SED",
-                config=config,
-                name=config['run_name'],
-            )
+        # if config['wandb']:
+        #     wandb.login(
+        #         key = "433d80a0f2ec170d67780fc27cd9d54a5039a57b",
+        #     )
+        #     wandb.init(
+        #         project="SED",
+        #         config=config,
+        #         name=config['run_name'],
+        #     )
+        if len(config['augmentation'])!=0:
+            name = "+".join(config['augmentation'])
+        else:
+            args_dict = config['model']['args']
+            name = "gru" if args_dict['use_gru'] else "lstm"
+            name = name + f"_b{args_dict['base_channels']}_h{args_dict['ffn_hidden']}_chn{args_dict['num_channels']}"
         outputdir = os.path.join(
-            config['outputpath'], config['model']['type'],
-            "{}_{}".format(
-                datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%m'),
-                uuid.uuid1().hex))
+            config['outputpath'], config['model']['type'],name
+            # "{}_{}".format(
+            #     datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%m'),
+            #     uuid.uuid1().hex)
+            )
         # Create base dir
         Path(outputdir).mkdir(exist_ok=True, parents=True)
 
@@ -98,8 +105,8 @@ class Runner(object):
 # augmentation begin
 
         augment_dict = {
-            "time shift":utils.TimeShift(),
-            "freq shift":utils.FreqShift(),
+            "time shift":utils.TimeShift(50, 10),
+            "freq shift":utils.FreqShift(50,10),
             "time mask":utils.TimeMask(),
             "freq mask":utils.FreqMask(),
             "noise":utils.AddNoise(),
@@ -192,14 +199,14 @@ class Runner(object):
             logging_msg = f"Epoch {epoch}   training_loss: {train_loss:.2f}  val_loss: {val_loss:.2f}  " \
                           f"precision: {p:.2f}  recall: {r:.2f}  f1: {f1:.2f}"
             logger.info(logging_msg)
-            if config['wandb']:
-                wandb.log({
-                    'train_loss': train_loss,
-                    'val_loss': val_loss,
-                    'precision': p,
-                    'recall': r,
-                    'f1': f1
-                })
+            # if config['wandb']:
+            #     wandb.log({
+            #         'train_loss': train_loss,
+            #         'val_loss': val_loss,
+            #         'precision': p,
+            #         'recall': r,
+            #         'f1': f1
+            #     })
 
             scheduler.step(val_loss)
             if val_loss < best_loss:
@@ -361,8 +368,7 @@ class Runner(object):
                      headers='keys',
                      tablefmt='github')))
 
-    def train_evaluate(
-        self, config_file, **eval_kwargs):
+    def train_evaluate(self, config_file, **eval_kwargs):
         experiment_path = self.train(config_file)
         self.evaluate(experiment_path, **eval_kwargs)
 

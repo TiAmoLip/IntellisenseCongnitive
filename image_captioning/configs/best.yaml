@@ -1,0 +1,22 @@
+model: resnet101_attention
+outputpath: experiments/best
+
+dataset_base_path: /lustre/home/acct-stu/stu343/IntellisenseCongnitive/image_captioning/flickr8k
+load_img_to_memory: True
+vocab_path: utils/vocab_set.pkl
+embedding_dim: 256
+attention_dim: 256
+decoder_size: 256
+schedule_sampling: 'linear'
+sample_k: 100
+
+sample_method: greed # 'greed' or 'beam'
+train_args:
+    batch_size: 64
+    learning_rate: !!float 1e-3
+    num_epochs: 40
+    save_freq: 10
+eval_args:
+    batch_size: 1
+
+optimizer: adam

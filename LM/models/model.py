@@ -129,10 +129,11 @@ class DecoderOnlyModel(nn.Module):
         return mask
     
     def init_weights(self):
-        initrange = 0.1
-        nn.init.uniform_(self.encoder.weight, -initrange, initrange)
-        nn.init.zeros_(self.decoder.bias)
-        nn.init.uniform_(self.decoder.weight, -initrange, initrange)
+        # initrange = 0.1
+        # nn.init.uniform_(self.encoder.weight, -initrange, initrange)
+        # nn.init.zeros_(self.decoder.bias)
+        # nn.init.uniform_(self.decoder.weight, -initrange, initrange)
+        pass
     
     
     def forward(self, src, has_mask=True):
@@ -150,8 +151,8 @@ class DecoderOnlyModel(nn.Module):
         output = self.decoder(output)
         return F.log_softmax(output, dim=-1)
 
-
-
+    def init_hidden(self, bsz=1):
+        pass
 
 
 
